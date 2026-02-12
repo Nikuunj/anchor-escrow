@@ -21,7 +21,6 @@ pub mod anchor_escrow {
     }
 
     pub fn take(ctx: Context<Take>) -> Result<()> {
-        ctx.accounts.take()?;
-        ctx.accounts.close()
+        ctx.accounts.take()
     }
 }

@@ -15,9 +15,9 @@ pub struct Take<'info> {
 
 
     #[account(mint::token_program = token_program)]
-    pub mint_a: InterfaceAccount<'info, Mint>,
+    pub mint_a: Box<InterfaceAccount<'info, Mint>>,
     #[account(mint::token_program = token_program)]
-    pub mint_b: InterfaceAccount<'info, Mint>,
+    pub mint_b: Box<InterfaceAccount<'info, Mint>>,
 
 
     #[account(
@@ -26,21 +26,21 @@ pub struct Take<'info> {
         associated_token::authority = maker,
         associated_token::token_program = token_program
     )]
-    pub maker_ata_b: InterfaceAccount<'info, TokenAccount>,
+    pub maker_ata_b: Box<InterfaceAccount<'info, TokenAccount>>,
     #[account(
         mut,
         associated_token::mint = mint_a,
         associated_token::authority = taker,
         associated_token::token_program = token_program
     )]
-    pub taker_ata_a: InterfaceAccount<'info, TokenAccount>,
+    pub taker_ata_a: Box<InterfaceAccount<'info, TokenAccount>>,
     #[account(
         mut,
         associated_token::mint = mint_b,
         associated_token::authority = taker,
         associated_token::token_program = token_program
     )]
-    pub taker_ata_b: InterfaceAccount<'info, TokenAccount>,
+    pub taker_ata_b: Box<InterfaceAccount<'info, TokenAccount>>,
 
 
     #[account(
@@ -49,17 +49,17 @@ pub struct Take<'info> {
         has_one = mint_a,
         has_one = maker,
         has_one = mint_b,
-        seeds = [b"escrow", maker.key().as_ref(), &escrow.seed.to_le_bytes()],
+        seeds = [b"escrow", maker.key().as_ref(), escrow.seed.to_le_bytes().as_ref()],
         bump
     )]
-    pub escrow: Account<'info, Escrow>,
+    pub escrow: Box<Account<'info, Escrow>>,
     #[account(
         mut,
         associated_token::mint = mint_a,
         associated_token::authority = escrow,
         associated_token::token_program = token_program
     )]
-    pub vault: InterfaceAccount<'info, TokenAccount>,
+    pub vault: Box<InterfaceAccount<'info, TokenAccount>>,
 
 
     pub associated_token_program: Program<'info, AssociatedToken>,
@@ -69,8 +69,13 @@ pub struct Take<'info> {
 
 impl<'info> Take<'info> {
     pub fn take(&mut self) -> Result<()> {
+        let signer_seeds: &[&[&[u8]]] = &[&[
+            b"escrow", 
+            self.maker.to_account_info().key.as_ref(), 
+            &self.escrow.seed.to_le_bytes(),
+            &[self.escrow.bump]
+        ]];
 
-        let signer_seeds: &[&[&[u8]]] = &[&[b"escrow", self.maker.to_account_info().key.as_ref(), &self.escrow.seed.to_le_bytes(),  &[self.escrow.bump]]];
         let transfer_accounts_taker_to_maker_b = TransferChecked {
             mint: self.mint_b.to_account_info(),
             from: self.taker_ata_b.to_account_info(),
@@ -93,11 +98,8 @@ impl<'info> Take<'info> {
         );
 
         transfer_checked(transfer_taker_to_maker_b_cpi_ctx, self.escrow.receive, self.mint_b.decimals)?;
-        transfer_checked(transfer_vault_to_taker_a_cpi_ctx, self.vault.amount, self.mint_a.decimals)
-    }
+        transfer_checked(transfer_vault_to_taker_a_cpi_ctx, self.vault.amount, self.mint_a.decimals)?;
 
-    pub fn close(&mut self) -> Result<()> {
-        let signer_seeds: &[&[&[u8]]] = &[&[b"escrow", self.maker.to_account_info().key.as_ref(), &self.escrow.seed.to_le_bytes(),  &[self.escrow.bump]]];
         let close_accounts = CloseAccount {
             account: self.vault.to_account_info(),
             authority: self.escrow.to_account_info(),
