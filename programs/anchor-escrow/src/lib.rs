@@ -20,6 +20,10 @@ pub mod anchor_escrow {
         ctx.accounts.init_escrow(seed, receive, &ctx.bumps)?;
         ctx.accounts.deposit(deposite)
     }
+
+    pub fn refund(ctx: Context<Refund>) -> Result<()> {
+        ctx.accounts.refund()
+    }
 }
 
 #[derive(Accounts)]
