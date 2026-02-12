@@ -11,11 +11,6 @@ declare_id!("Dv9XWLt8UfeWwSd9GwtpSQz4EKE5C4UqDxUgdCRQnykE");
 pub mod anchor_escrow {
     use super::*;
 
-    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
-        msg!("Greetings from: {:?}", ctx.program_id);
-        Ok(())
-    }
-
     pub fn make(ctx: Context<Make>, seed: u64, deposite: u64, receive: u64) -> Result<()> {
         ctx.accounts.init_escrow(seed, receive, &ctx.bumps)?;
         ctx.accounts.deposit(deposite)
@@ -24,7 +19,9 @@ pub mod anchor_escrow {
     pub fn refund(ctx: Context<Refund>) -> Result<()> {
         ctx.accounts.refund()
     }
-}
 
-#[derive(Accounts)]
-pub struct Initialize {}
+    pub fn take(ctx: Context<Take>) -> Result<()> {
+        ctx.accounts.take()?;
+        ctx.accounts.close()
+    }
+}
